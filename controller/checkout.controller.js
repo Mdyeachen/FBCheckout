@@ -49,20 +49,21 @@ const checkoutHandler = asyncWraper(async (req, res) => {
   );
 
   const productIds = [];
+
   getResponse.data.data.forEach((product) => {
     productIds.push(product.id);
   });
+
+  const productLineItems = productIds.map((id, index) => ({
+    productId: id,
+    quantity: productQuantities[index],
+  }));
 
   // POST to Storefront Carts
   const cartResponse = await axios.post(
     `${process.env.STOREFRONT_URL}/api/storefront/carts`,
     {
-      lineItems: [
-        {
-          quantity: 2,
-          productId: 5616,
-        },
-      ],
+      lineItems: productLineItems,
       locale: "en",
     },
     {
@@ -75,7 +76,7 @@ const checkoutHandler = asyncWraper(async (req, res) => {
     }
   );
 
-  console.log("API Response:", productIds);
+  console.log("API Response:", productLineItems);
   console.log("Cart Id", cartResponse.data.id);
 
   res.send("Checkout Page");
