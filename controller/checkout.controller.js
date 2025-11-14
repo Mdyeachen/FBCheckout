@@ -50,34 +50,35 @@ const checkoutHandler = asyncWraper(async (req, res) => {
 
   const productIds = [];
 
-  getResponse.data.data.forEach((product) => {
-    productIds.push(product.id);
-  });
+  console.log(getResponse);
 
-  const productLineItems = productIds.map((id, index) => ({
-    productId: id,
-    quantity: productQuantities[index],
-  }));
+  // getResponse.data.data.forEach((product) => {
+  //   productIds.push(product.id);
+  // });
 
-  // POST to Storefront Carts
-  const cartResponse = await axios.post(
-    `${process.env.STOREFRONT_URL}/api/storefront/carts`,
-    {
-      lineItems: productLineItems,
-      locale: "en",
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.STOREFRONT_ACCESS_TOKEN}`,
-        "X-Auth-Client": process.env.STOREFRONT_CLIENT_ID,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    }
-  );
+  // const productLineItems = productIds.map((id, index) => ({
+  //   productId: id,
+  //   quantity: productQuantities[index],
+  // }));
 
-  console.log("API Response:", productLineItems);
-  console.log("Cart Id", cartResponse.data.id);
+  // // POST to Storefront Carts
+  // const cartResponse = await axios.post(
+  //   `${process.env.STOREFRONT_URL}/api/storefront/carts`,
+  //   {
+  //     lineItems: productLineItems,
+  //     locale: "en",
+  //   },
+  //   {
+  //     headers: {
+  //       Authorization: `Bearer ${process.env.STOREFRONT_ACCESS_TOKEN}`,
+  //       "X-Auth-Client": process.env.STOREFRONT_CLIENT_ID,
+  //       "Content-Type": "application/json",
+  //       Accept: "application/json",
+  //     },
+  //   }
+  // );
+
+  // console.log("Cart Id", cartResponse.data.id);
 
   res.send("Checkout Page");
 });
