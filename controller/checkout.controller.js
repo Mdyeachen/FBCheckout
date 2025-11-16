@@ -1,27 +1,32 @@
 const { StatusCodes, ReasonPhrases } = require("http-status-codes");
-const { asyncWraper } = require("../middleware");
+const { asyncWrapper } = require("../middleware");
 const axios = require("axios");
+const getProduct = require("../utils/getProduct");
+const getModifier = require("../utils/getModifier");
+const margeProduct = require("../utils/margeProduct");
 
-const checkoutHandler = asyncWraper(async (req, res) => {
+const checkoutHandler = asyncWrapper(async (req, res) => {
   const { products, coupon, cart_origin } = req.query;
+  const productSkus = [];
+  const productQuantities = [];
 
   // Validate products parameter
   if (!products) {
-    return res.status(400).json({
+    return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
+      status: ReasonPhrases.BAD_REQUEST,
       error: "Products parameter is required",
     });
   }
 
-  const productSkus = [];
-  const productQuantities = [];
-
-  // Parse products
+  // Parse products with trim
   products.split(",").forEach((item) => {
-    const [sku, quantity] = item.split(":");
+    const [skuRaw, quantityRaw] = item.split(":");
+    const sku = skuRaw?.trim();
+    const quantity = quantityRaw?.trim();
     if (sku && quantity) {
       productSkus.push(sku);
-      productQuantities.push({ sku: Number(quantity) });
+      productQuantities.push({ sku, quantity: Number(quantity) });
     }
   });
 
@@ -35,91 +40,22 @@ const checkoutHandler = asyncWraper(async (req, res) => {
   }
 
   // Make API request to get product details
-  const productRes = await axios.get(
-    `${process.env.BG_STORE_URL}catalog/products?sku:in=${productSkus.join(
-      ","
-    )}`,
-    {
-      headers: {
-        "X-Auth-Token": process.env.BG_TOKEN,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    }
+  const productDetails = await getProduct(productSkus);
+
+  // Get modifier options if any
+  const productIdList = productDetails.map((item) => item.product_id);
+
+  // Fetch all modifiers for all products
+  const modifierRes = await getModifier(productIdList);
+
+  // const marge product detials, quantity and modifier
+  const productInfo = margeProduct(
+    productDetails,
+    modifierRes,
+    productQuantities
   );
 
-  // Make API request to get product details
-  const variantRes = await axios.get(
-    `${process.env.BG_STORE_URL}catalog/variants?sku:in=${productSkus.join(
-      ","
-    )}`,
-    {
-      headers: {
-        "X-Auth-Token": process.env.BG_TOKEN,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    }
-  );
-
-  // Get full product details for line items
-  let productDetials = [];
-
-  // Add variants
-  variantRes.data.data.forEach((v) => {
-    if (!productDetials.some((item) => item.sku === v.sku)) {
-      productDetials.push({
-        sku: v.sku,
-        type: "variant",
-        product_id: v.product_id,
-        variant_id: v.id,
-        option_set_id: null,
-      });
-    }
-  });
-
-  // add products
-  productRes.data.data.forEach((p) => {
-    if (!productDetials.some((item) => item.sku === p.sku)) {
-      productDetials.push({
-        sku: p.sku,
-        type: "product",
-        product_id: p.id,
-        variant_id: null,
-        option_set_id: p.option_set_id,
-      });
-    }
-  });
-
-  // getResponse.data.data.forEach((product) => {
-  //   productIds.push(product.id);
-  // });
-
-  // const productLineItems = productIds.map((id, index) => ({
-  //   productId: id,
-  //   quantity: productQuantities[index],
-  // }));
-
-  // // POST to Storefront Carts
-  // const cartResponse = await axios.post(
-  //   `${process.env.STOREFRONT_URL}/api/storefront/carts`,
-  //   {
-  //     lineItems: productLineItems,
-  //     locale: "en",
-  //   },
-  //   {
-  //     headers: {
-  //       Authorization: `Bearer ${process.env.STOREFRONT_ACCESS_TOKEN}`,
-  //       "X-Auth-Client": process.env.STOREFRONT_CLIENT_ID,
-  //       "Content-Type": "application/json",
-  //       Accept: "application/json",
-  //     },
-  //   }
-  // );
-
-  console.log(productDetials);
-  console.log(productQuantities);
-  // console.log("Cart Id", cartResponse.data.id);
+  console.log(productInfo);
 
   res.send("Checkout Page");
 });

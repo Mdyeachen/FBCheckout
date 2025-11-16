@@ -1,4 +1,4 @@
-const asyncWraper = (fn) => {
+const asyncWrapper = (fn) => {
   return async (req, res, next) => {
     try {
       await fn(req, res, next);
@@ -9,4 +9,4 @@ const asyncWraper = (fn) => {
 };
 
 // export the asyncwrapper middleware
-module.exports = asyncWraper;
+module.exports = asyncWrapper;
