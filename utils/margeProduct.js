@@ -1,7 +1,7 @@
 const margeProduct = (products, modifiers, quantitys) => {
   return products.map((product) => {
     const productQuantity = quantitys.find((q) => q.sku === product.sku);
-    const productModifiers = modifiers.filter(
+    const productModifiers = modifiers.find(
       (m) => m.product_id === product.product_id
     );
     return {

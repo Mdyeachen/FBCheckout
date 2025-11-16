@@ -4,6 +4,7 @@ const axios = require("axios");
 const getProduct = require("../utils/getProduct");
 const getModifier = require("../utils/getModifier");
 const margeProduct = require("../utils/margeProduct");
+const addCart = require("../utils/addCart");
 
 const checkoutHandler = asyncWrapper(async (req, res) => {
   const { products, coupon, cart_origin } = req.query;
@@ -55,9 +56,16 @@ const checkoutHandler = asyncWrapper(async (req, res) => {
     productQuantities
   );
 
-  console.log(productInfo);
+  // Add Cart Items
+  const cartRes = await addCart(productInfo);
 
-  res.send("Checkout Page");
+  console.log("cart id:", cartRes.data.id);
+
+  return res.redirect(
+    `https://bodyjewelry.com/checkout.php?cart_id=${cartRes.data.id}`
+  );
+
+  // res.send("Checkout Page");
 });
 
 module.exports = { checkoutHandler };
