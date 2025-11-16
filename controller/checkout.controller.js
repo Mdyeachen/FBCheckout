@@ -21,7 +21,7 @@ const checkoutHandler = asyncWraper(async (req, res) => {
     const [sku, quantity] = item.split(":");
     if (sku && quantity) {
       productSkus.push(sku);
-      productQuantities.push(Number(quantity));
+      productQuantities.push({ sku: Number(quantity) });
     }
   });
 
@@ -35,7 +35,7 @@ const checkoutHandler = asyncWraper(async (req, res) => {
   }
 
   // Make API request to get product details
-  const getResponse = await axios.get(
+  const productRes = await axios.get(
     `${process.env.BG_STORE_URL}catalog/products?sku:in=${productSkus.join(
       ","
     )}`,
@@ -48,9 +48,48 @@ const checkoutHandler = asyncWraper(async (req, res) => {
     }
   );
 
-  const productIds = [];
+  // Make API request to get product details
+  const variantRes = await axios.get(
+    `${process.env.BG_STORE_URL}catalog/variants?sku:in=${productSkus.join(
+      ","
+    )}`,
+    {
+      headers: {
+        "X-Auth-Token": process.env.BG_TOKEN,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    }
+  );
 
-  console.log(getResponse);
+  // Get full product details for line items
+  let productDetials = [];
+
+  // Add variants
+  variantRes.data.data.forEach((v) => {
+    if (!productDetials.some((item) => item.sku === v.sku)) {
+      productDetials.push({
+        sku: v.sku,
+        type: "variant",
+        product_id: v.product_id,
+        variant_id: v.id,
+        option_set_id: null,
+      });
+    }
+  });
+
+  // add products
+  productRes.data.data.forEach((p) => {
+    if (!productDetials.some((item) => item.sku === p.sku)) {
+      productDetials.push({
+        sku: p.sku,
+        type: "product",
+        product_id: p.id,
+        variant_id: null,
+        option_set_id: p.option_set_id,
+      });
+    }
+  });
 
   // getResponse.data.data.forEach((product) => {
   //   productIds.push(product.id);
@@ -78,6 +117,8 @@ const checkoutHandler = asyncWraper(async (req, res) => {
   //   }
   // );
 
+  console.log(productDetials);
+  console.log(productQuantities);
   // console.log("Cart Id", cartResponse.data.id);
 
   res.send("Checkout Page");
